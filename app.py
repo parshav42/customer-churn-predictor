@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import joblib
 
-model = joblib.load("churn_model.pkl")
+model = joblib.load("Customer_Churn.pkl")
 scaler = joblib.load("scaler.pkl")
 feature_names = joblib.load("features.pkl")
 
