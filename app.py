@@ -1,277 +1,240 @@
+import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-
 
 # ==========================================
-# 1. LOAD DATASET
+# PAGE CONFIG
 # ==========================================
 
-df = pd.read_csv("Customer_Churn.csv")
-
-print("Dataset loaded successfully!")
-print("Dataset shape:", df.shape)
-
-
-# ==========================================
-# 2. CREATE TARGET
-# ==========================================
-
-# 1 = Customer churned
-# 0 = Customer did not churn
-
-y = df["Churn Label_Yes"]
-
-
-# ==========================================
-# 3. CREATE FEATURES
-# ==========================================
-
-# Remove target column and columns that give
-# information directly about the final outcome
-
-remove_columns = [
-    "Churn Label_Yes",
-    "Customer Status_Joined",
-    "Customer Status_Stayed",
-    "Churn Score",
-    "CLTV",
-    "Churn Category_Competitor",
-    "Churn Category_Dissatisfaction",
-    "Churn Category_Other",
-    "Churn Category_Price",
-    "Churn Category_Unknown"
-]
-
-X = df.drop(
-    columns=remove_columns,
-    errors="ignore"
+st.set_page_config(
+    page_title="Customer Churn Predictor",
+    page_icon="📊",
+    layout="wide"
 )
 
 
 # ==========================================
-# 4. CHECK FEATURES
+# LOAD MODEL FILES
 # ==========================================
 
-print("\nNumber of features:")
-print(len(X.columns))
+@st.cache_resource
+def load_model_files():
+    model = joblib.load("Customer_Churn.pkl")
+    scaler = joblib.load("scaler.pkl")
+    features = joblib.load("features.pkl")
 
-print("\nFeature names:")
-print(list(X.columns))
-
-
-# ==========================================
-# 5. SPLIT DATA
-# ==========================================
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.20,
-    random_state=42,
-    stratify=y
-)
+    return model, scaler, features
 
 
-# ==========================================
-# 6. CREATE SCALER
-# ==========================================
+try:
+    model, scaler, features = load_model_files()
 
-# IMPORTANT:
-# Fit the scaler using the SAME training
-# columns that the model will use
+except FileNotFoundError as e:
+    st.error("Model files not found!")
 
-scaler = StandardScaler()
+    st.write(
+        "Make sure these files are uploaded to your GitHub repository:"
+    )
 
-X_train_scaled = scaler.fit_transform(X_train)
+    st.code("""
+Customer_Churn.pkl
+scaler.pkl
+features.pkl
+""")
 
-X_test_scaled = scaler.transform(X_test)
+    st.stop()
 
 
 # ==========================================
-# 7. TRAIN MODEL
+# TITLE
 # ==========================================
 
-model = LogisticRegression(
-    max_iter=1000,
-    random_state=42
-)
+st.title("📊 Customer Churn Prediction")
 
-model.fit(
-    X_train_scaled,
-    y_train
+st.write(
+    "Enter customer information below to predict "
+    "whether the customer is likely to churn."
 )
 
 
 # ==========================================
-# 8. TEST MODEL
+# CREATE INPUT DATA
 # ==========================================
 
-predictions = model.predict(
-    X_test_scaled
-)
-
-accuracy = accuracy_score(
-    y_test,
-    predictions
-)
-
-print("\nModel Accuracy:")
-print(accuracy)
+input_data = {}
 
 
 # ==========================================
-# 9. CHECK MODEL AND SCALER FEATURES
+# INPUT FIELDS
 # ==========================================
 
-print("\n==============================")
-print("FEATURE CHECK")
-print("==============================")
+st.subheader("Customer Information")
 
-print(
-    "X feature count:",
-    len(X.columns)
-)
-
-print(
-    "Model feature count:",
-    model.n_features_in_
-)
-
-print(
-    "Scaler feature count:",
-    scaler.n_features_in_
-)
+col1, col2 = st.columns(2)
 
 
-# Check that feature names match exactly
+for i, feature in enumerate(features):
 
-print("\nFeature names used for training:")
-print(list(X.columns))
+    # Alternate between two columns
+    current_col = col1 if i % 2 == 0 else col2
 
-print("\nFeature names expected by scaler:")
-print(list(scaler.feature_names_in_))
+    with current_col:
+
+        # Binary / one-hot encoded columns
+        if (
+            feature.startswith("Gender_")
+            or feature.startswith("Married_")
+            or feature.startswith("Dependents_")
+            or feature.startswith("Phone Service_")
+            or feature.startswith("Multiple Lines_")
+            or feature.startswith("Internet Type_")
+            or feature.startswith("Online Security_")
+            or feature.startswith("Online Backup_")
+            or feature.startswith("Device Protection_")
+            or feature.startswith("Premium Tech Support_")
+            or feature.startswith("Streaming TV_")
+            or feature.startswith("Streaming Movies_")
+            or feature.startswith("Streaming Music_")
+            or feature.startswith("Unlimited Data_")
+            or feature.startswith("Offer_")
+            or feature.startswith("Contract_")
+            or feature.startswith("Paperless Billing_")
+            or feature.startswith("Payment Method_")
+            or feature.startswith("City_")
+        ):
+
+            input_data[feature] = st.selectbox(
+                feature,
+                options=[0, 1],
+                key=feature
+            )
 
 
-# Final comparison
+        # Numeric columns
+        else:
 
-features_match = (
-    list(X.columns)
-    ==
-    list(scaler.feature_names_in_)
-)
-
-print("\nDo features match exactly?")
-print(features_match)
-
-
-# ==========================================
-# 10. SAVE FILES
-# ==========================================
-
-# Save model
-joblib.dump(
-    model,
-    "Customer_Churn.pkl"
-)
-
-# Save scaler
-joblib.dump(
-    scaler,
-    "scaler.pkl"
-)
-
-# Save feature names
-joblib.dump(
-    list(X.columns),
-    "features.pkl"
-)
+            input_data[feature] = st.number_input(
+                feature,
+                value=0.0,
+                key=feature
+            )
 
 
 # ==========================================
-# 11. LOAD FILES AGAIN TO VERIFY
+# PREDICTION BUTTON
 # ==========================================
 
-saved_model = joblib.load(
-    "Customer_Churn.pkl"
-)
-
-saved_scaler = joblib.load(
-    "scaler.pkl"
-)
-
-saved_features = joblib.load(
-    "features.pkl"
-)
+st.divider()
 
 
-print("\n==============================")
-print("SAVED FILE CHECK")
-print("==============================")
-
-print(
-    "Saved model features:",
-    saved_model.n_features_in_
-)
-
-print(
-    "Saved scaler features:",
-    saved_scaler.n_features_in_
-)
-
-print(
-    "Saved feature names:",
-    len(saved_features)
-)
-
-
-# Check exact feature match
-
-saved_features_match = (
-    saved_features
-    ==
-    list(saved_scaler.feature_names_in_)
-)
-
-print(
-    "\nSaved features match scaler:"
-)
-
-print(
-    saved_features_match
-)
-
-
-# ==========================================
-# 12. FINAL RESULT
-# ==========================================
-
-print("\n==============================")
-print("FINAL CHECK")
-print("==============================")
-
-if (
-    len(X.columns)
-    == model.n_features_in_
-    == scaler.n_features_in_
-    == len(saved_features)
-    and features_match
-    and saved_features_match
+if st.button(
+    "🔮 Predict Customer Churn",
+    use_container_width=True
 ):
 
-    print("SUCCESS! All model files match correctly.")
+    try:
 
-else:
+        # ======================================
+        # CREATE DATAFRAME
+        # ======================================
 
-    print("ERROR! Feature files do not match.")
+        input_df = pd.DataFrame([input_data])
 
 
-print("\nFiles created:")
-print("Customer_Churn.pkl")
-print("scaler.pkl")
-print("features.pkl")
+        # ======================================
+        # FORCE EXACT TRAINING FEATURE ORDER
+        # ======================================
+
+        input_df = input_df.reindex(
+            columns=features,
+            fill_value=0
+        )
+
+
+        # ======================================
+        # FEATURE VALIDATION
+        # ======================================
+
+        if len(input_df.columns) != model.n_features_in_:
+
+            st.error(
+                f"Feature mismatch! "
+                f"App has {len(input_df.columns)} features, "
+                f"but model expects {model.n_features_in_}."
+            )
+
+            st.stop()
+
+
+        # ======================================
+        # SCALE INPUT
+        # ======================================
+
+        scaled_input = scaler.transform(input_df)
+
+
+        # ======================================
+        # PREDICT
+        # ======================================
+
+        prediction = model.predict(
+            scaled_input
+        )[0]
+
+        probability = model.predict_proba(
+            scaled_input
+        )[0][1]
+
+
+        # ======================================
+        # DISPLAY RESULT
+        # ======================================
+
+        st.divider()
+
+        st.subheader("Prediction Result")
+
+        result_col1, result_col2 = st.columns(2)
+
+
+        with result_col1:
+
+            if prediction == 1:
+
+                st.error(
+                    "⚠️ Customer is likely to churn"
+                )
+
+            else:
+
+                st.success(
+                    "✅ Customer is likely to stay"
+                )
+
+
+        with result_col2:
+
+            st.metric(
+                "Churn Probability",
+                f"{probability * 100:.2f}%"
+            )
+
+
+        # ======================================
+        # PROBABILITY DETAILS
+        # ======================================
+
+        st.progress(float(probability))
+
+        st.caption(
+            f"Churn risk probability: "
+            f"{probability * 100:.2f}%"
+        )
+
+
+    except Exception as e:
+
+        st.error("Prediction Error")
+
+        st.exception(e)
