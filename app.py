@@ -15,7 +15,7 @@ st.write("Enter customer details in the sidebar to predict whether the customer 
 
 
 
-t.sidebar.header("Customer Details")
+st.sidebar.header("Customer Details")
 
 Age = st.sidebar.slider("Age", 18, 100, 35)
 
