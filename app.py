@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 
 
@@ -9,227 +10,202 @@ import joblib
 
 st.set_page_config(
     page_title="Customer Churn Predictor",
-    page_icon="📊",
-    layout="wide"
+    page_icon="📊"
 )
 
 
 # ==========================================
-# LOAD MODEL FILES
+# LOAD FILES
 # ==========================================
 
 @st.cache_resource
-def load_model_files():
+def load_files():
     model = joblib.load("Customer_Churn.pkl")
     scaler = joblib.load("scaler.pkl")
-    features = joblib.load("features.pkl")
 
-    return model, scaler, features
+    return model, scaler
 
 
-try:
-    model, scaler, features = load_model_files()
-
-except FileNotFoundError as e:
-    st.error("Model files not found!")
-
-    st.write(
-        "Make sure these files are uploaded to your GitHub repository:"
-    )
-
-    st.code("""
-Customer_Churn.pkl
-scaler.pkl
-features.pkl
-""")
-
-    st.stop()
+model, scaler = load_files()
 
 
 # ==========================================
-# TITLE
+# IMPORTANT:
+# USE EXACT FEATURES FROM SCALER
 # ==========================================
 
-st.title("📊 Customer Churn Prediction")
+features = list(scaler.feature_names_in_)
+
+
+# ==========================================
+# PAGE HEADER
+# ==========================================
+
+st.title("📊 Customer Churn Predictor")
+
+st.subheader("Predict if customer will leave")
 
 st.write(
-    "Enter customer information below to predict "
-    "whether the customer is likely to churn."
+    "Enter customer details below and click Predict Churn."
 )
 
 
 # ==========================================
-# CREATE INPUT DATA
+# SIDEBAR INPUTS
 # ==========================================
 
-input_data = {}
+st.sidebar.header("Customer Details")
 
 
-# ==========================================
-# INPUT FIELDS
-# ==========================================
+Age = st.sidebar.slider(
+    "Age",
+    18,
+    100,
+    35
+)
 
-st.subheader("Customer Information")
+Tenure = st.sidebar.slider(
+    "Tenure in Months",
+    0,
+    72,
+    12
+)
 
-col1, col2 = st.columns(2)
+Satisfaction = st.sidebar.slider(
+    "Satisfaction Score",
+    1,
+    5,
+    3
+)
 
-
-for i, feature in enumerate(features):
-
-    # Alternate between two columns
-    current_col = col1 if i % 2 == 0 else col2
-
-    with current_col:
-
-        # Binary / one-hot encoded columns
-        if (
-            feature.startswith("Gender_")
-            or feature.startswith("Married_")
-            or feature.startswith("Dependents_")
-            or feature.startswith("Phone Service_")
-            or feature.startswith("Multiple Lines_")
-            or feature.startswith("Internet Type_")
-            or feature.startswith("Online Security_")
-            or feature.startswith("Online Backup_")
-            or feature.startswith("Device Protection_")
-            or feature.startswith("Premium Tech Support_")
-            or feature.startswith("Streaming TV_")
-            or feature.startswith("Streaming Movies_")
-            or feature.startswith("Streaming Music_")
-            or feature.startswith("Unlimited Data_")
-            or feature.startswith("Offer_")
-            or feature.startswith("Contract_")
-            or feature.startswith("Paperless Billing_")
-            or feature.startswith("Payment Method_")
-            or feature.startswith("City_")
-        ):
-
-            input_data[feature] = st.selectbox(
-                feature,
-                options=[0, 1],
-                key=feature
-            )
-
-
-        # Numeric columns
-        else:
-
-            input_data[feature] = st.number_input(
-                feature,
-                value=0.0,
-                key=feature
-            )
+Contract = st.sidebar.selectbox(
+    "Contract",
+    [
+        "Month-to-Month",
+        "One Year",
+        "Two Year"
+    ]
+)
 
 
 # ==========================================
-# PREDICTION BUTTON
+# CREATE INPUT DATAFRAME
 # ==========================================
 
-st.divider()
+# Start with all features expected by scaler
+input_df = pd.DataFrame(
+    np.zeros((1, len(features))),
+    columns=features
+)
 
 
-if st.button(
-    "🔮 Predict Customer Churn",
-    use_container_width=True
-):
+# Add user values ONLY if those columns exist
+
+if "Age" in input_df.columns:
+    input_df["Age"] = Age
+
+
+if "Tenure in Months" in input_df.columns:
+    input_df["Tenure in Months"] = Tenure
+
+
+if "Satisfaction Score" in input_df.columns:
+    input_df["Satisfaction Score"] = Satisfaction
+
+
+# Contract encoding
+
+if "Contract_One Year" in input_df.columns:
+    input_df["Contract_One Year"] = (
+        1 if Contract == "One Year" else 0
+    )
+
+
+if "Contract_Two Year" in input_df.columns:
+    input_df["Contract_Two Year"] = (
+        1 if Contract == "Two Year" else 0
+    )
+
+
+# ==========================================
+# DEBUG INFORMATION
+# ==========================================
+
+st.caption(
+    f"Scaler expects {len(features)} features"
+)
+
+
+# ==========================================
+# PREDICTION
+# ==========================================
+
+if st.button("Predict Churn"):
 
     try:
 
-        # ======================================
-        # CREATE DATAFRAME
-        # ======================================
-
-        input_df = pd.DataFrame([input_data])
-
-
-        # ======================================
-        # FORCE EXACT TRAINING FEATURE ORDER
-        # ======================================
-
-        input_df = input_df.reindex(
-            columns=features,
-            fill_value=0
+        # Scale using exact scaler columns
+        scaled_input = scaler.transform(
+            input_df
         )
 
 
-        # ======================================
-        # FEATURE VALIDATION
-        # ======================================
-
-        if len(input_df.columns) != model.n_features_in_:
+        # IMPORTANT:
+        # Model expects the same number of features
+        if scaled_input.shape[1] != model.n_features_in_:
 
             st.error(
-                f"Feature mismatch! "
-                f"App has {len(input_df.columns)} features, "
-                f"but model expects {model.n_features_in_}."
+                f"Model expects {model.n_features_in_} features "
+                f"but scaler produced {scaled_input.shape[1]}."
             )
 
             st.stop()
 
 
-        # ======================================
-        # SCALE INPUT
-        # ======================================
-
-        scaled_input = scaler.transform(input_df)
-
-
-        # ======================================
-        # PREDICT
-        # ======================================
-
+        # Predict
         prediction = model.predict(
             scaled_input
-        )[0]
+        )
 
-        probability = model.predict_proba(
+
+        # Probability
+        prediction_proba = model.predict_proba(
             scaled_input
-        )[0][1]
+        )
+
+        churn_probability = float(
+            prediction_proba[0][1]
+        )
 
 
-        # ======================================
-        # DISPLAY RESULT
-        # ======================================
+        # Result
 
-        st.divider()
+        if prediction[0] == 1:
 
-        st.subheader("Prediction Result")
+            st.error(
+                "🔴 Customer Will CHURN!"
+            )
 
-        result_col1, result_col2 = st.columns(2)
+        else:
 
-
-        with result_col1:
-
-            if prediction == 1:
-
-                st.error(
-                    "⚠️ Customer is likely to churn"
-                )
-
-            else:
-
-                st.success(
-                    "✅ Customer is likely to stay"
-                )
-
-
-        with result_col2:
-
-            st.metric(
-                "Churn Probability",
-                f"{probability * 100:.2f}%"
+            st.success(
+                "🟢 Customer Will STAY!"
             )
 
 
-        # ======================================
-        # PROBABILITY DETAILS
-        # ======================================
+        # Probability
 
-        st.progress(float(probability))
+        st.subheader(
+            "Churn Probability"
+        )
 
-        st.caption(
-            f"Churn risk probability: "
-            f"{probability * 100:.2f}%"
+        st.progress(
+            int(churn_probability * 100)
+        )
+
+        st.metric(
+            "Churn Probability",
+            f"{churn_probability * 100:.2f}%"
         )
 
 
