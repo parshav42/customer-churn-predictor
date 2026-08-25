@@ -4,195 +4,334 @@ import numpy as np
 import joblib
 
 
-# ==========================================
+# =========================================================
 # PAGE CONFIG
-# ==========================================
+# =========================================================
 
 st.set_page_config(
-    page_title="Customer Churn Predictor",
-    page_icon="📊",
-    layout="wide"
+    page_title="ChurnIQ | Customer Intelligence",
+    page_icon="✦",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 
-# ==========================================
-# CUSTOM CSS - PREMIUM DESIGN
-# ==========================================
+# =========================================================
+# PREMIUM CSS
+# =========================================================
 
 st.markdown("""
 <style>
 
-/* Main background */
+/* IMPORT FONT */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+/* REMOVE STREAMLIT DEFAULTS */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+
+/* GLOBAL */
 .stApp {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e9eef7 100%);
+    background:
+        radial-gradient(circle at 10% 10%, rgba(124, 92, 255, 0.12), transparent 28%),
+        radial-gradient(circle at 90% 20%, rgba(34, 211, 238, 0.10), transparent 25%),
+        #0B0F19;
+    color: #F8FAFC;
+    font-family: 'DM Sans', sans-serif;
 }
 
-/* Main title */
-.main-title {
-    font-size: 48px;
-    font-weight: 800;
-    text-align: center;
-    color: #1f2937;
-    margin-bottom: 5px;
+
+/* MAIN CONTAINER */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1400px;
 }
 
-/* Subtitle */
-.subtitle {
-    font-size: 20px;
-    text-align: center;
-    color: #6b7280;
-    margin-bottom: 35px;
+
+/* SIDEBAR */
+[data-testid="stSidebar"] {
+    background: linear-gradient(
+        180deg,
+        #111827 0%,
+        #0B0F19 100%
+    );
+    border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Cards */
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 18px;
-    box-shadow: 0px 8px 25px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
+[data-testid="stSidebar"] * {
+    color: #E5E7EB;
 }
 
-/* Section title */
-.section-title {
-    font-size: 24px;
+
+/* SIDEBAR LABELS */
+[data-testid="stSidebar"] label {
+    font-weight: 600;
+}
+
+
+/* HERO */
+.hero {
+    padding: 42px;
+    border-radius: 28px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(124,92,255,0.95),
+            rgba(79,70,229,0.85)
+        );
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow:
+        0 30px 80px rgba(0,0,0,0.35);
+    margin-bottom: 28px;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.20);
+    font-size: 12px;
     font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 15px;
+    letter-spacing: 1px;
 }
 
-/* Prediction button */
+.hero h1 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 52px;
+    margin: 18px 0 8px 0;
+    font-weight: 800;
+}
+
+.hero p {
+    font-size: 18px;
+    opacity: 0.85;
+    max-width: 650px;
+}
+
+
+/* GLASS CARD */
+.premium-card {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.08),
+            rgba(255,255,255,0.03)
+        );
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 24px;
+    padding: 28px;
+    backdrop-filter: blur(20px);
+    box-shadow:
+        0 20px 50px rgba(0,0,0,0.20);
+    min-height: 190px;
+}
+
+
+/* SECTION TITLE */
+.section-title {
+    font-family: 'Manrope', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: #FFFFFF;
+}
+
+.section-subtitle {
+    color: #94A3B8;
+    margin-bottom: 22px;
+}
+
+
+/* METRICS */
+[data-testid="stMetric"] {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 18px;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #94A3B8;
+}
+
+[data-testid="stMetricValue"] {
+    color: #FFFFFF;
+}
+
+
+/* BUTTON */
 .stButton > button {
     width: 100%;
-    height: 55px;
-    border-radius: 12px;
+    min-height: 58px;
     border: none;
-    font-size: 20px;
-    font-weight: 700;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: 800;
+    color: white;
+    background:
+        linear-gradient(
+            135deg,
+            #8B5CF6,
+            #6366F1
+        );
+    box-shadow:
+        0 15px 35px rgba(99,102,241,0.35);
+    transition: all 0.25s ease;
 }
 
-/* Metric cards */
-[data-testid="stMetric"] {
-    background-color: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0px 5px 18px rgba(0,0,0,0.08);
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 20px 45px rgba(99,102,241,0.50);
 }
 
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background-color: #ffffff;
+
+/* PROGRESS */
+.stProgress > div > div {
+    border-radius: 20px;
+}
+
+
+/* RESULT CARD */
+.result-card {
+    padding: 32px;
+    border-radius: 24px;
+    margin-top: 20px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.10),
+            rgba(255,255,255,0.04)
+        );
+    border: 1px solid rgba(255,255,255,0.12);
+}
+
+
+/* FOOTER */
+.footer {
+    text-align: center;
+    color: #64748B;
+    padding: 30px;
+    font-size: 14px;
+}
+
+
+/* DIVIDER */
+hr {
+    border-color: rgba(255,255,255,0.08);
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==========================================
-# LOAD FILES
-# ==========================================
+# =========================================================
+# LOAD MODEL
+# =========================================================
 
 @st.cache_resource
 def load_files():
     model = joblib.load("Customer_Churn.pkl")
     scaler = joblib.load("scaler.pkl")
-
     return model, scaler
 
 
 model, scaler = load_files()
 
 
-# ==========================================
-# GET EXACT FEATURES
-# ==========================================
-
+# IMPORTANT: USE EXACT SCALER FEATURES
 features = list(scaler.feature_names_in_)
 
 
-# ==========================================
-# HEADER
-# ==========================================
+# =========================================================
+# HERO
+# =========================================================
 
-st.markdown(
-    """
-    <div class="main-title">
-        📊 Customer Churn Predictor
+st.markdown("""
+<div class="hero">
+
+    <div class="hero-badge">
+        ✦ AI CUSTOMER INTELLIGENCE
     </div>
-    """,
-    unsafe_allow_html=True
-)
 
-st.markdown(
-    """
-    <div class="subtitle">
-        AI-powered customer retention prediction system
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    <h1>Predict churn.<br>Protect revenue.</h1>
+
+    <p>
+        Turn customer signals into actionable intelligence with
+        machine-learning powered churn prediction.
+    </p>
+
+</div>
+""", unsafe_allow_html=True)
 
 
-# ==========================================
-# TOP METRICS
-# ==========================================
+# =========================================================
+# TOP STATS
+# =========================================================
 
-col1, col2, col3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 
-with col1:
-    st.metric(
-        "Model Type",
-        "Logistic Regression"
-    )
+with c1:
+    st.metric("AI ENGINE", "Active")
 
-with col2:
-    st.metric(
-        "Input Features",
-        len(features)
-    )
+with c2:
+    st.metric("MODEL", "Logistic AI")
 
-with col3:
-    st.metric(
-        "Prediction",
-        "AI Powered"
-    )
+with c3:
+    st.metric("FEATURES", len(features))
+
+with c4:
+    st.metric("STATUS", "Ready")
 
 
 st.write("")
 
 
-# ==========================================
+# =========================================================
 # SIDEBAR
-# ==========================================
+# =========================================================
 
-st.sidebar.markdown("## 👤 Customer Details")
+st.sidebar.markdown("# ✦ ChurnIQ")
 
 st.sidebar.markdown(
-    "Enter customer information below to generate a churn prediction."
+    """
+    <p style="color:#94A3B8;">
+    Customer intelligence dashboard
+    </p>
+    """,
+    unsafe_allow_html=True
 )
+
+st.sidebar.divider()
+
+st.sidebar.markdown("### Customer Profile")
 
 
 Age = st.sidebar.slider(
     "Age",
-    min_value=18,
-    max_value=100,
-    value=35
+    18,
+    100,
+    35
 )
 
 
 Tenure = st.sidebar.slider(
     "Tenure in Months",
-    min_value=0,
-    max_value=72,
-    value=12
+    0,
+    72,
+    12
 )
 
 
 Satisfaction = st.sidebar.slider(
     "Satisfaction Score",
-    min_value=1,
-    max_value=5,
-    value=3
+    1,
+    5,
+    3
 )
 
 
@@ -206,105 +345,87 @@ Contract = st.sidebar.selectbox(
 )
 
 
-# ==========================================
-# MAIN CONTENT
-# ==========================================
+st.sidebar.divider()
 
-left_column, right_column = st.columns([1.2, 1])
-
-
-# ==========================================
-# CUSTOMER SUMMARY
-# ==========================================
-
-with left_column:
-
-    st.markdown(
-        '<div class="card">',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="section-title">Customer Profile</div>',
-        unsafe_allow_html=True
-    )
-
-    profile_col1, profile_col2 = st.columns(2)
-
-    with profile_col1:
-        st.metric(
-            "Age",
-            Age
-        )
-
-        st.metric(
-            "Satisfaction",
-            f"{Satisfaction}/5"
-        )
-
-    with profile_col2:
-        st.metric(
-            "Tenure",
-            f"{Tenure} Months"
-        )
-
-        st.metric(
-            "Contract",
-            Contract
-        )
-
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+st.sidebar.markdown(
+    """
+    <p style="font-size:12px;color:#64748B;">
+    Powered by Machine Learning<br>
+    Customer Intelligence Platform
+    </p>
+    """,
+    unsafe_allow_html=True
+)
 
 
-# ==========================================
-# MODEL INFORMATION
-# ==========================================
+# =========================================================
+# CUSTOMER OVERVIEW
+# =========================================================
 
-with right_column:
-
-    st.markdown(
-        '<div class="card">',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="section-title">Prediction Engine</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "This machine learning model analyzes customer information "
-        "to estimate the probability that a customer may leave."
-    )
-
-    st.write("")
-
-    st.info(
-        f"Model is using {len(features)} trained features."
-    )
-
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+left, right = st.columns([1.2, 1])
 
 
-# ==========================================
+with left:
+
+    st.markdown("""
+    <div class="premium-card">
+        <div class="section-title">
+            Customer overview
+        </div>
+        <div class="section-subtitle">
+            Current customer profile and engagement signals
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    m1, m2 = st.columns(2)
+
+    with m1:
+        st.metric("Customer Age", f"{Age} years")
+        st.metric("Satisfaction", f"{Satisfaction} / 5")
+
+    with m2:
+        st.metric("Customer Tenure", f"{Tenure} months")
+        st.metric("Contract", Contract)
+
+
+with right:
+
+    st.markdown("""
+    <div class="premium-card">
+
+        <div class="section-title">
+            Intelligence engine
+        </div>
+
+        <div class="section-subtitle">
+            Machine learning evaluates customer signals to estimate
+            the probability of churn.
+        </div>
+
+        <p style="color:#CBD5E1; line-height:1.8;">
+        The model processes behavioral and customer information
+        to identify potential retention risks before they become
+        revenue losses.
+        </p>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+st.write("")
+st.divider()
+
+
+# =========================================================
 # CREATE INPUT DATA
-# ==========================================
+# =========================================================
 
 input_df = pd.DataFrame(
     np.zeros((1, len(features))),
     columns=features
 )
 
-
-# ==========================================
-# ADD USER INPUTS
-# ==========================================
 
 if "Age" in input_df.columns:
     input_df["Age"] = Age
@@ -318,219 +439,169 @@ if "Satisfaction Score" in input_df.columns:
     input_df["Satisfaction Score"] = Satisfaction
 
 
-# ==========================================
-# CONTRACT ENCODING
-# ==========================================
-
 if "Contract_One Year" in input_df.columns:
-
     input_df["Contract_One Year"] = (
         1 if Contract == "One Year" else 0
     )
 
 
 if "Contract_Two Year" in input_df.columns:
-
     input_df["Contract_Two Year"] = (
         1 if Contract == "Two Year" else 0
     )
 
 
-# ==========================================
-# PREDICTION SECTION
-# ==========================================
+# =========================================================
+# PREDICTION AREA
+# =========================================================
 
-st.write("")
+st.markdown("""
+<div style="text-align:center; margin-top:25px;">
+    <h2 style="font-family:Manrope;">
+        Ready to analyze?
+    </h2>
 
-st.markdown("### 🔮 Generate Prediction")
+    <p style="color:#94A3B8;">
+        Generate an AI-powered churn prediction instantly.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 
-if st.button("Predict Customer Churn"):
+if st.button("✦ Analyze Customer Risk"):
 
     try:
 
-        with st.spinner(
-            "Analyzing customer data..."
-        ):
+        with st.spinner("AI is analyzing customer signals..."):
 
-            # Scale data
             scaled_input = scaler.transform(
                 input_df
             )
 
-
-            # Check model compatibility
-            if (
-                scaled_input.shape[1]
-                != model.n_features_in_
-            ):
-
-                st.error(
-                    f"""
-                    Model feature mismatch.
-
-                    Model expects:
-                    {model.n_features_in_}
-
-                    Scaler produced:
-                    {scaled_input.shape[1]}
-                    """
-                )
-
-                st.stop()
-
-
-            # Prediction
             prediction = model.predict(
                 scaled_input
             )
 
-
-            # Probability
             prediction_proba = model.predict_proba(
                 scaled_input
             )
-
 
             churn_probability = float(
                 prediction_proba[0][1]
             )
 
 
-        # ======================================
+        # =================================================
         # RESULT
-        # ======================================
+        # =================================================
 
-        st.write("")
-
-        result_col1, result_col2 = st.columns(2)
-
-
-        with result_col1:
-
-            if prediction[0] == 1:
-
-                st.error(
-                    "🔴 HIGH CHURN RISK"
-                )
-
-                st.write(
-                    "This customer may be at risk of leaving."
-                )
-
-            else:
-
-                st.success(
-                    "🟢 LOW CHURN RISK"
-                )
-
-                st.write(
-                    "This customer is likely to remain."
-                )
+        st.markdown(
+            '<div class="result-card">',
+            unsafe_allow_html=True
+        )
 
 
-        with result_col2:
+        if prediction[0] == 1:
 
-            st.metric(
-                "Churn Probability",
-                f"{churn_probability * 100:.2f}%"
+            st.markdown("## 🔴 High Churn Risk")
+
+            st.write(
+                "This customer shows signals associated with a higher probability of leaving."
+            )
+
+        else:
+
+            st.markdown("## 🟢 Customer Likely to Stay")
+
+            st.write(
+                "This customer currently shows a relatively stable retention profile."
             )
 
 
-        # ======================================
-        # PROBABILITY BAR
-        # ======================================
+        st.write("")
 
-        st.markdown("### 📈 Churn Risk Score")
+        r1, r2, r3 = st.columns(3)
+
+        with r1:
+            st.metric(
+                "Churn Risk",
+                f"{churn_probability * 100:.1f}%"
+            )
+
+        with r2:
+            st.metric(
+                "Stay Probability",
+                f"{(1 - churn_probability) * 100:.1f}%"
+            )
+
+        with r3:
+
+            if churn_probability < 0.30:
+                risk = "LOW"
+
+            elif churn_probability < 0.60:
+                risk = "MEDIUM"
+
+            else:
+                risk = "HIGH"
+
+            st.metric(
+                "Risk Level",
+                risk
+            )
+
+
+        st.write("")
+
+        st.markdown("### Risk probability")
 
         st.progress(
             int(churn_probability * 100)
         )
 
 
-        # ======================================
-        # RISK LEVEL
-        # ======================================
-
-        if churn_probability < 0.30:
-
-            risk_level = "Low Risk 🟢"
-
-        elif churn_probability < 0.60:
-
-            risk_level = "Medium Risk 🟡"
-
-        else:
-
-            risk_level = "High Risk 🔴"
-
-
-        risk_col1, risk_col2, risk_col3 = st.columns(3)
-
-        with risk_col1:
-
-            st.metric(
-                "Risk Level",
-                risk_level
-            )
-
-
-        with risk_col2:
-
-            st.metric(
-                "Stay Probability",
-                f"{(1 - churn_probability) * 100:.2f}%"
-            )
-
-
-        with risk_col3:
-
-            st.metric(
-                "Model Features",
-                len(features)
-            )
-
-
-        # ======================================
-        # BUSINESS RECOMMENDATION
-        # ======================================
-
         st.write("")
 
-        st.markdown("### 💡 Business Recommendation")
+
+        # =================================================
+        # RECOMMENDATION
+        # =================================================
+
+        st.markdown("### ✦ Recommended action")
+
 
         if churn_probability >= 0.60:
 
-            st.warning(
-                """
-                High priority customer.
+            st.warning("""
+            **Immediate retention action recommended**
 
-                Consider contacting the customer with a retention offer,
-                service improvement, or personalized support.
-                """
-            )
+            Consider personalized outreach, targeted incentives,
+            and proactive customer support.
+            """)
 
         elif churn_probability >= 0.30:
 
-            st.info(
-                """
-                Moderate churn risk.
+            st.info("""
+            **Monitor customer engagement**
 
-                Monitor customer satisfaction and engagement.
-                Consider targeted retention campaigns.
-                """
-            )
+            Review satisfaction levels and consider proactive
+            retention communication.
+            """)
 
         else:
 
-            st.success(
-                """
-                Customer appears stable.
+            st.success("""
+            **Customer appears stable**
 
-                Continue providing good service and monitor
-                satisfaction levels.
-                """
-            )
+            Maintain service quality and continue monitoring
+            customer satisfaction.
+            """)
+
+
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
+        )
 
 
     except Exception as e:
@@ -540,14 +611,18 @@ if st.button("Predict Customer Churn"):
         st.exception(e)
 
 
-# ==========================================
+# =========================================================
 # FOOTER
-# ==========================================
+# =========================================================
 
-st.write("")
+st.markdown("""
+<div class="footer">
 
-st.divider()
+    ✦ CHURNIQ INTELLIGENCE PLATFORM<br>
 
-st.caption(
-    "Customer Churn Predictor • Machine Learning Project • Streamlit"
-)
+    <span style="font-size:12px;">
+    Predict • Understand • Retain
+    </span>
+
+</div>
+""", unsafe_allow_html=True)
